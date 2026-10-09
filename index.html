@@ -1065,7 +1065,7 @@ function mapView(){const {items,h}=mapLayout();const rec=recommended();const t=S
   return `<div class="stack">${top}
   <div class="map ${testDone()?'':'fog'}" style="height:${h}px">${zones}${decos}<span class="cloud c1"></span><span class="cloud c2"></span><span class="cloud c3"></span><svg class="path" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>${items.map(node).join('')}</div>
   <section class="stack" style="gap:10px"><div class="world-h"><h2>I tuoi badge</h2><span class="muted">${Object.keys(ST.badges).length}/${BADGES.length}</span></div><div class="badges">${BADGES.map(b=>`<div class="badge ${ST.badges[b.id]?'got':''}" title="${b.d}"><span class="b">${b.e}</span>${b.n}</div>`).join('')}</div></section>
-  <div class="footer">${testDone()?'<button class="btn ghost" data-act="testIntro">Rifai il check-in</button>':''}<button class="btn ghost" data-act="parents">Per i genitori</button></div></div>
+  <div class="footer">${testDone()?'<button class="btn ghost" data-act="testIntro">Rifai il check-in</button>':''}<button class="btn ghost" data-act="parents">Per i genitori</button></div><p class="muted" style="text-align:center;font-size:.8rem">Mate Chill · versione 5 (gioco a piattaforme)</p></div>
   <nav class="dock"><button data-act="map" class="on">🗺️<span>Mappa</span></button><button data-act="shop">🛍️<span>Negozio</span></button><button data-act="settings">⚙️<span>Profilo</span></button></nav>`}
 function scrollToRec(){const r=app().querySelector('.node.rec');if(r&&testDone()){const y=r.getBoundingClientRect().top+scrollY-innerHeight*.4;if(y>200)window.scrollTo({top:y,behavior:'auto'})}}
 
@@ -1291,4 +1291,4 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&MODAL){MODAL=null;r
 render();
 
 </script>
-<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script></body></html>
+<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!window.__mcReloaded){window.__mcReloaded=1;location.reload()}}))}</script></body></html>
