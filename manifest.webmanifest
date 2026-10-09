@@ -1,0 +1,17 @@
+{
+  "name": "Mate Chill",
+  "short_name": "Mate Chill",
+  "description": "Il gioco di matematica con Mirtillo e Lulù",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7FA",
+  "theme_color": "#E0408F",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
