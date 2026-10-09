@@ -717,7 +717,7 @@ function gameHTML(){const boss=PS.type==='boss';const B=boss?BOSSES[PS.w]:null;
   ${boss?`<div class="gboss"><b>${B.n}</b><div class="hp"><i id="ghp" style="width:${PS.hp}%"></i></div></div>`:''}
   <div class="gq" id="gq"></div>
   <div class="gmsg" id="gmsg" aria-live="polite"></div>
-  <div class="gbottom"><div class="gchoices" id="gch"></div><button class="gbtn ghintb" id="ghintb" data-act="ghint" aria-label="Aiutino">💡</button></div>
+  <div class="gbottom"><div class="gchoices" id="gch"></div>${PS.type==='test'?'<button class="gbtn ghintb gskip" data-act="gskip" aria-label="Non lo so">🤷</button>':'<button class="gbtn ghintb" id="ghintb" data-act="ghint" aria-label="Aiutino">💡</button>'}</div>
   <div class="ghints" id="ghints" hidden></div>
 </div>`}
 
@@ -749,18 +749,19 @@ function buildSegment(x0){const W=GM.W||400;const L=Math.max(520,W*1.25),gw=Math
   for(let i=0;i<3;i++)GM.deco.push({x:x0+Math.random()*L,e:pick(GM.th.deco),s:0.8+Math.random()*0.6});
   GM.j={x0:x0+L,w:gw};GM.gaps.push(GM.j);GM.ground.push([x0+L+gw,x0+L+gw+40]);
   newQuestion()}
-function newQuestion(){const it=PS.queue[PS.idx];const L=PS.type==='mission'?PS.lv[it.id]:it.L;
+function newQuestion(){let it,L;
+  if(PS.type==='test'){const t=ST.test;it={id:TEST_ORDER[t.i]};L=t.pending?1:2;GM.th=WTH[SK[it.id].world]}else{it=PS.queue[PS.idx];L=PS.type==='mission'?PS.lv[it.id]:it.L}
   const q=makeQ(it.id,L,'test');if(q.fmt==='bug')q.fmt='input';
   PS.cur={q,tries:0,hints:0,shown:false,done:false,ch:gameChoices(q)};
   GM.plats=PS.cur.ch.map((c,i)=>({...c,i,state:'ok',fall:0,shake:0}));layoutPlats();
-  const gq=document.getElementById('gq');if(gq)gq.innerHTML=`<div class="gqmeta"><span>${SK[q.skill].emo} ${SK[q.skill].name}</span><span>liv. ${q.level}</span></div><p>${q.text}</p>${q.svg?`<div class="gfig">${q.svg}</div>`:''}${q.math?`<div class="gmath">${q.math}${q.eq!==false?' = ?':''}</div>`:''}`;
+  const gq=document.getElementById('gq');if(gq)gq.innerHTML=`<div class="gqmeta"><span>${SK[q.skill].emo} ${SK[q.skill].name}</span><span>${PS.type==='test'?(ST.test.pending?'più semplice':'check-in '+(ST.test.i+1)+'/'+TEST_ORDER.length):'liv. '+q.level}</span></div><p>${q.text}</p>${q.svg?`<div class="gfig">${q.svg}</div>`:''}${q.math?`<div class="gmath">${q.math}${q.eq!==false?' = ?':''}</div>`:''}`;
   const ch=document.getElementById('gch');if(ch)ch.innerHTML=PS.cur.ch.map((c,i)=>`<button class="gchoice c${i}" data-gc="${i}" disabled>${c.html}</button>`).join('');
   document.getElementById('ghints').hidden=true;document.getElementById('ghints').innerHTML='';
   setTimeout(gResize,30)}
 function layoutPlats(){if(!GM||!GM.j)return;const j=GM.j,n=GM.plats.length,pw=Math.min(118,j.w/n-18);
   const hs=[0.42,0.62,0.5];const span=Math.max(90,GM.gy-GM.top-90);
   GM.plats.forEach((p,i)=>{p.w=pw;p.h=40;p.x=j.x0+j.w*((i+0.5)/n)-pw/2;p.baseY=GM.gy-Math.min(span,170)*hs[i%3]-20;if(!p.fall)p.y=p.baseY})}
-function gDots(){const d=document.getElementById('gdots');if(d)d.innerHTML=PS.queue.map((_,i)=>`<i class="${i===PS.idx?'now':PS.res[i]?(PS.res[i]==='auto'?'ok':PS.res[i]==='help'?'help':'ko'):''}"></i>`).join('')}
+function gDots(){const d=document.getElementById('gdots');if(d&&PS.type==='test'){const t=ST.test;d.innerHTML=TEST_ORDER.map((id,i)=>{const r=t.res[id];return `<i class="${i===t.i?'now':r?(r.l2?'ok':r.l1?'help':'ko'):''}"></i>`}).join('');return}if(d)d.innerHTML=PS.queue.map((_,i)=>`<i class="${i===PS.idx?'now':PS.res[i]?(PS.res[i]==='auto'?'ok':PS.res[i]==='help'?'help':'ko'):''}"></i>`).join('')}
 function gMsg(html,kind){const m=document.getElementById('gmsg');if(!m)return;m.className='gmsg show '+(kind||'');m.innerHTML=html;clearTimeout(GM.msgT);GM.msgT=setTimeout(()=>{m.className='gmsg'},kind==='bad'?3800:1600)}
 
 /* ---------- input ---------- */
@@ -772,7 +773,16 @@ function gChoose(i){if(!GM||GM.phase!=='wait')return;const p=GM.plats[i];if(!p||
   setChoices(false);GM.target=p;gJumpTo(p.x+p.w/2,p.y,()=>gLand(p))}
 function setChoices(on){document.querySelectorAll('#gch .gchoice').forEach(b=>{const p=GM.plats[+b.dataset.gc];b.disabled=!on||!p||p.state!=='ok'})}
 function gJumpTo(tx,ty,cb){const p=GM.p,T=0.62;p.vx=(tx-p.x)/T;p.vy=(ty-p.y-0.5*G_.g*T*T)/T;p.on=false;GM.phase='jump';GM.jt={tx,ty,cb,t:0,T};sfx('jump')}
+function testRecord(q,ok){const t=ST.test,r=t.res[q.skill]||(t.res[q.skill]={l2:null,l1:null});if(q.level===2)r.l2=ok;else r.l1=ok;if(q.level===2&&!ok)t.pending=true;else{t.pending=false;t.i++}save()}
+function testNext(x){gDots();if(ST.test.i>=TEST_ORDER.length&&!ST.test.pending){GM.phase='done';setTimeout(()=>{gStop();finishTest()},500);return}GM.qn++;GM.phase='run';buildSegment(x)}
+function gSkip(){if(!GM||GM.phase!=='wait'||PS.type!=='test')return;const q=PS.cur.q;testRecord(q,false);setChoices(false);gMsg('Ok, segnato 💜 ci lavoriamo dopo','');const j=GM.j;gJumpTo(j.x0+j.w+36,GM.gy,()=>{GM.p.on=true;GM.p.y=GM.gy;testNext(j.x0+j.w+36)})}
 function gLand(pl){const c=PS.cur,q=c.q;GM.p.sq=1;
+  if(PS.type==='test'){c.done=true;testRecord(q,pl.ok);
+    if(pl.ok){burst(pl.x+pl.w/2,pl.y,20,['#FFD84D','#FF6FA8','#7FE3C0','#fff']);sfx('ok');gMsg(pick(['Giusto ✨','Sì! 💜','Esatto','Perfetto']),'good');GM.phase='celebrate';
+      setTimeout(()=>{if(!GM)return;const j=GM.j;gJumpTo(j.x0+j.w+36,GM.gy,()=>{GM.p.on=true;GM.p.y=GM.gy;testNext(j.x0+j.w+36)})},650)}
+    else{pl.state='crack';gMsg(pick(['Segnato: questo lo alleniamo insieme 💜','Ok, ora sappiamo da dove partire','Nessun problema, la nuvola ti porta dall’altra parte ☁️']),'');
+      setTimeout(()=>{if(!GM)return;pl.state='fall';GM.phase='fall';GM.p.on=false;GM.p.vx=0;GM.p.vy=-200},420)}
+    return}
   if(pl.ok){const kind=c.shown?'guided':(c.tries===0&&c.hints===0?'auto':'help');c.done=true;const r=scoreQ(kind,q);
     burst(pl.x+pl.w/2,pl.y,24,['#FFD84D','#FF6FA8','#7FE3C0','#fff']);sfx('ok');sfx('coin');
     document.getElementById('gcoins').textContent=ST.coins;
@@ -790,7 +800,9 @@ function gLand(pl){const c=PS.cur,q=c.q;GM.p.sq=1;
   gMsg(t?`<b>Occhio!</b> ${t.msg}`:pick(SOFT),'bad');
   setTimeout(()=>{if(!GM)return;pl.state='fall';GM.phase='fall';GM.p.on=false;GM.p.vx=0;GM.p.vy=-200},420);
   if(c.hints<c.tries&&c.hints<2){c.hints=c.tries;showHints()}}
-function gRespawn(){const j=GM.j;Object.assign(GM.p,{x:j.x0-26,y:GM.top+20,vx:0,vy:0,on:false});GM.phase='drop';
+function gRespawn(){const j=GM.j;
+  if(PS.type==='test'){Object.assign(GM.p,{x:j.x0+j.w+36,y:GM.top+20,vx:0,vy:0,on:false});GM.phase='drop';GM.afterDrop=()=>testNext(j.x0+j.w+36);return}
+  Object.assign(GM.p,{x:j.x0-26,y:GM.top+20,vx:0,vy:0,on:false});GM.phase='drop';
   const left=GM.plats.filter(p=>p.state==='ok');if(left.length===1&&!PS.cur.shown){PS.cur.hints=Math.max(PS.cur.hints,2)}}
 function gFinishRun(x){GM.flagX=x+Math.max(260,GM.W*0.6);GM.ground.push([x,GM.flagX+GM.W]);GM.j=null;GM.plats=[];GM.phase='run';
   document.getElementById('gq').innerHTML=`<p class="gdone">${PS.type==='boss'?'Il boss scappa… corri al traguardo!':'Ultimo sprint fino alla bandiera! 🏁'}</p>`;document.getElementById('gch').innerHTML=''}
@@ -818,7 +830,7 @@ function gUpdate(dt){const p=GM.p;
   if(GM.phase==='jump'){p.x+=p.vx*dt;GM.jt.t+=dt;if(GM.jt.t>=GM.jt.T){p.x=GM.jt.tx;p.y=GM.jt.ty;p.vy=0;p.on=true;GM.phase='landed';const cb=GM.jt.cb;GM.jt=null;cb()}}
   else if(GM.phase==='run'&&!p.on&&p.y>=GM.gy){p.y=GM.gy;p.vy=0;p.on=true;p.sq=1}
   if(GM.phase==='fall'){if(p.y>GM.H+60)gRespawn()}
-  if(GM.phase==='drop'&&p.y>=GM.gy){p.y=GM.gy;p.vy=0;p.on=true;p.sq=1;GM.phase='wait';setChoices(true);burst(p.x,p.y,10,['#fff','#CFF1FF'])}
+  if(GM.phase==='drop'&&p.y>=GM.gy){p.y=GM.gy;p.vy=0;p.on=true;p.sq=1;if(GM.afterDrop){const f=GM.afterDrop;GM.afterDrop=null;burst(p.x,p.y,10,['#fff','#CFF1FF']);f();return}GM.phase='wait';setChoices(true);burst(p.x,p.y,10,['#fff','#CFF1FF'])}
   GM.plats.forEach(pl=>{if(pl.state==='fall'){pl.fall+=dt;pl.y+=600*dt*pl.fall*3}if(pl.state==='crack')pl.shake+=dt});
   if(GM.phase==='landed'&&GM.target&&GM.target.state==='fall'){}
   GM.camX+=(GM.camT-GM.camX)*Math.min(1,dt*5);
@@ -1034,7 +1046,7 @@ function welcome(){return `<div class="stack" style="padding-top:12px">
   <p class="muted" style="max-width:52ch">Ogni livello è fatto di esercizi di matematica. Guadagni stelle e monete, sblocchi avatar e compagni. Se ti blocchi, <b>Mirtillo</b> e <b>Lulù</b> ti danno un aiutino.</p></div>
  <div class="card stack"><label class="f" for="w-name">Come ti chiami, avventuriera?<input id="w-name" class="txt" maxlength="20" autocomplete="off" placeholder="Il tuo nome" value="${esc(W.name)}"></label>
   <div class="stack" style="gap:8px"><b>Scegli il tuo avatar</b><div class="picker">${AVATARS.filter(a=>!a[1]).map(a=>`<button class="pick" data-av="${a[0]}" aria-pressed="${a[0]===W.avatar}">${ico(a[0])}</button>`).join('')}</div><p class="muted" style="font-size:.9rem">Altri avatar, compagni e temi si sbloccano nel negozio con le monete 🪙</p></div>
-  <button class="btn primary big wide" id="w-go">Inizia l’avventura ✨</button></div><p class="muted" style="text-align:center;font-size:.85rem;font-weight:700">Mate Chill · versione 5 (gioco a piattaforme)</p></div>`}
+  <button class="btn primary big wide" id="w-go">Inizia l’avventura ✨</button></div><p class="muted" style="text-align:center;font-size:.85rem;font-weight:700">Mate Chill · versione 6 (tutto a piattaforme)</p></div>`}
 function bindWelcome(){const n=document.getElementById('w-name');n.addEventListener('input',()=>W.name=n.value);
   app().querySelectorAll('[data-av]').forEach(b=>b.onclick=()=>{W.avatar=b.dataset.av;W.name=n.value;app().innerHTML=welcome();bindWelcome()});
   document.getElementById('w-go').onclick=()=>{const v=n.value.trim();if(!v){n.focus();n.classList.add('shake');setTimeout(()=>n.classList.remove('shake'),400);return}ST.name=v;ST.avatar=W.avatar;save();go('testIntro')}}
@@ -1065,7 +1077,7 @@ function mapView(){const {items,h}=mapLayout();const rec=recommended();const t=S
   return `<div class="stack">${top}
   <div class="map ${testDone()?'':'fog'}" style="height:${h}px">${zones}${decos}<span class="cloud c1"></span><span class="cloud c2"></span><span class="cloud c3"></span><svg class="path" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>${items.map(node).join('')}</div>
   <section class="stack" style="gap:10px"><div class="world-h"><h2>I tuoi badge</h2><span class="muted">${Object.keys(ST.badges).length}/${BADGES.length}</span></div><div class="badges">${BADGES.map(b=>`<div class="badge ${ST.badges[b.id]?'got':''}" title="${b.d}"><span class="b">${b.e}</span>${b.n}</div>`).join('')}</div></section>
-  <div class="footer">${testDone()?'<button class="btn ghost" data-act="testIntro">Rifai il check-in</button>':''}<button class="btn ghost" data-act="parents">Per i genitori</button></div><p class="muted" style="text-align:center;font-size:.8rem">Mate Chill · versione 5 (gioco a piattaforme)</p></div>
+  <div class="footer">${testDone()?'<button class="btn ghost" data-act="testIntro">Rifai il check-in</button>':''}<button class="btn ghost" data-act="parents">Per i genitori</button></div><p class="muted" style="text-align:center;font-size:.8rem">Mate Chill · versione 6 (tutto a piattaforme)</p></div>
   <nav class="dock"><button data-act="map" class="on">🗺️<span>Mappa</span></button><button data-act="shop">🛍️<span>Negozio</span></button><button data-act="settings">⚙️<span>Profilo</span></button></nav>`}
 function scrollToRec(){const r=app().querySelector('.node.rec');if(r&&testDone()){const y=r.getBoundingClientRect().top+scrollY-innerHeight*.4;if(y>200)window.scrollTo({top:y,behavior:'auto'})}}
 
@@ -1075,7 +1087,8 @@ function testIntro(){return `<div class="stack"><section class="card stack"><p c
  <div class="hint"><span class="lab">psst…</span>Non è una verifica: niente voto, niente timer. Se non sai, premi <b>Non lo so</b>: è un’informazione utile, non un errore. Carta e penna ammesse!</div>
  <p class="muted">Ricompensa: <b>+50 🪙</b> e <b>+50 XP</b>. Puoi fermarti quando vuoi e riprendere dopo.</p>
  <div class="row"><button class="btn primary big" data-act="startTest">Inizia ✨</button><button class="btn ghost" data-act="map">Più tardi</button></div></section></div>`}
-function startTest(){ST.test={inProgress:true,i:0,pending:false,res:{},started:today()};save();nextTestQ();go('test')}
+function startTest(){ST.test={inProgress:true,i:0,pending:false,res:{},started:today()};save();startTestGame()}
+function startTestGame(){PS={type:'test',queue:[{id:TEST_ORDER[ST.test.i]||'calcolo'}],idx:0,res:[],combo:0,xp:0,coins:0,inserted:0,startM:{}};MODAL=null;go('play')}
 function nextTestQ(){const t=ST.test;T={q:makeQ(TEST_ORDER[t.i],t.pending?1:2,'test'),answered:false}}
 function testView(){const t=ST.test,q=T.q;
   return `<div class="stack"><div class="row" style="justify-content:space-between"><button class="btn ghost" data-act="pauseTest">← Pausa</button><span class="pill">${WG[SK[q.skill].world].e} ${t.i+1} / ${TEST_ORDER.length}</span></div>
@@ -1261,13 +1274,14 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
    case'shop':MODAL=null;go('shop');break;
    case'testIntro':go('testIntro');break;
    case'startTest':startTest();break;
-   case'resumeTest':nextTestQ();go('test');break;
+   case'resumeTest':startTestGame();break;
    case'pauseTest':save();go('map');break;
    case'skip':answerTest('skip');break;
    case'check':{const v=document.getElementById('ans').value;SCREEN==='test'?answerTest(v):answerPlay(v);break}
    case'next':if(SCREEN==='test'){if(ST.test.i>=TEST_ORDER.length&&!ST.test.pending)finishTest();else{nextTestQ();render()}}else nextPlay();break;
    case'hint':useHint();break;
    case'ghint':gHint();break;
+   case'gskip':gSkip();break;
    case'ghclose':{const b=document.getElementById('ghints');if(b)b.hidden=true;break}
    case'dunno':{const c=PS.cur;if(c.hints<2){if(c.hints<1)addHint(1);addHint(2);c.hints=2;updateHintBtn();fb('info','💜','Nessun problema! Leggi questi due aiuti e prova. Se resti bloccata, premi “Fammi vedere come si fa”.');pet('Ci pensiamo insieme 💜')}else revealSolution();break}
    case'play':startLevel(t.dataset.id,+t.dataset.l);break;
