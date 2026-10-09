@@ -1034,7 +1034,7 @@ function welcome(){return `<div class="stack" style="padding-top:12px">
   <p class="muted" style="max-width:52ch">Ogni livello è fatto di esercizi di matematica. Guadagni stelle e monete, sblocchi avatar e compagni. Se ti blocchi, <b>Mirtillo</b> e <b>Lulù</b> ti danno un aiutino.</p></div>
  <div class="card stack"><label class="f" for="w-name">Come ti chiami, avventuriera?<input id="w-name" class="txt" maxlength="20" autocomplete="off" placeholder="Il tuo nome" value="${esc(W.name)}"></label>
   <div class="stack" style="gap:8px"><b>Scegli il tuo avatar</b><div class="picker">${AVATARS.filter(a=>!a[1]).map(a=>`<button class="pick" data-av="${a[0]}" aria-pressed="${a[0]===W.avatar}">${ico(a[0])}</button>`).join('')}</div><p class="muted" style="font-size:.9rem">Altri avatar, compagni e temi si sbloccano nel negozio con le monete 🪙</p></div>
-  <button class="btn primary big wide" id="w-go">Inizia l’avventura ✨</button></div></div>`}
+  <button class="btn primary big wide" id="w-go">Inizia l’avventura ✨</button></div><p class="muted" style="text-align:center;font-size:.85rem;font-weight:700">Mate Chill · versione 5 (gioco a piattaforme)</p></div>`}
 function bindWelcome(){const n=document.getElementById('w-name');n.addEventListener('input',()=>W.name=n.value);
   app().querySelectorAll('[data-av]').forEach(b=>b.onclick=()=>{W.avatar=b.dataset.av;W.name=n.value;app().innerHTML=welcome();bindWelcome()});
   document.getElementById('w-go').onclick=()=>{const v=n.value.trim();if(!v){n.focus();n.classList.add('shake');setTimeout(()=>n.classList.remove('shake'),400);return}ST.name=v;ST.avatar=W.avatar;save();go('testIntro')}}
