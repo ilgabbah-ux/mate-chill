@@ -486,6 +486,8 @@ h1,h2{letter-spacing:-.02em}
 .gdots i{background:rgba(255,255,255,.12);border:none}
 .gdots i.now{background:#FFD166}.gdots i.ok{background:#3DFF9A}.gdots i.help{background:#FFB347}.gdots i.ko{background:#FF4FA0}
 .gboss{text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.pill.coin.bump{animation:coinbump .35s ease-out}
+@keyframes coinbump{0%{transform:scale(1)}40%{transform:scale(1.25);box-shadow:0 0 18px rgba(255,216,77,.7)}100%{transform:scale(1)}}
 
 </style>
 <main id="app" aria-live="off"></main>
@@ -794,7 +796,7 @@ function gameMount(){if(GM&&GM.raf)cancelAnimationFrame(GM.raf);
   const th=WTH[PS.type==='boss'?PS.w:SK[PS.queue[0].id].world];
   const c=document.getElementById('gc');
   GM={c,ctx:c.getContext('2d'),th,t:0,last:performance.now(),camX:0,camT:0,phase:'run',p:{x:80,y:0,vx:0,vy:0,on:true,sq:0,face:1},
-    ground:[],gaps:[],coins:[],obst:[],deco:[],parts:[],plats:[],j:null,qn:0,msgT:0,boss:PS.type==='boss',proj:[],bossShake:0,flagX:null,stars:[],img:null,bimg:null};
+    ground:[],gaps:[],coins:[],obst:[],deco:[],parts:[],fly:[],pops:[],sparks:[],chain:0,plats:[],j:null,qn:0,msgT:0,boss:PS.type==='boss',proj:[],bossShake:0,flagX:null,stars:[],img:null,bimg:null};
   if(PHOTOS[ST.pet]){GM.img=new Image();GM.img.src=PHOTOS[ST.pet]}
   if(GM.boss){GM.bimg=new Image();GM.bimg.src=BOSSIMG[PS.w]}
   for(let i=0;i<60;i++)GM.stars.push([Math.random(),Math.random()*0.6,Math.random()*1.5+0.5]);
@@ -811,10 +813,9 @@ function gResize(){if(!GM)return;const c=GM.c,d=Math.min(2,devicePixelRatio||1);
   if(GM.p.on&&GM.phase!=='jump'&&GM.phase!=='fall')GM.p.y=GM.gy;layoutPlats()}
 
 /* ---------- mondo ---------- */
-function buildSegment(x0){const W=GM.W||400;const L=Math.max(520,W*1.25),gw=Math.min(520,Math.max(250,W*0.66));
+function buildSegment(x0){const W=GM.W||400;const L=Math.max(660,W*1.6),gw=Math.min(520,Math.max(250,W*0.66));
   const g0=GM.ground[GM.ground.length-1];if(g0&&g0[1]>=x0-1)g0[1]=x0+L;else GM.ground.push([x0,x0+L]);
-  for(let k=0;k<3;k++){const cx=x0+L*(0.18+k*0.27);for(let i=0;i<4;i++)GM.coins.push({x:cx+i*30,y:-(k%2?70:28)-Math.sin(i/3*Math.PI)*30,got:false})}
-  if(GM.qn>0||PS.idx>0){const ox=x0+L*(0.45+Math.random()*0.1);GM.obst.push({x:ox,e:pick(GM.th.obst),hit:false})}
+  coinPatterns(x0+70,x0+L-90,GM.qn>0||PS.idx>0);
   for(let i=0;i<5;i++)GM.deco.push({x:x0+40+Math.random()*(L-80),e:pick(GM.th.deco),s:0.75+Math.random()*0.75});
   GM.j={x0:x0+L,w:gw};GM.gaps.push(GM.j);GM.ground.push([x0+L+gw,x0+L+gw+40]);
   newQuestion()}
@@ -834,6 +835,44 @@ function gDots(){const d=document.getElementById('gdots');if(d&&PS.type==='test'
 function gMsg(html,kind){const m=document.getElementById('gmsg');if(!m)return;m.className='gmsg show '+(kind||'');m.innerHTML=html;clearTimeout(GM.msgT);GM.msgT=setTimeout(()=>{m.className='gmsg'},kind==='bad'?3800:1600)}
 
 /* ---------- input ---------- */
+/* ---------- monete: schemi vari, calamita, raccolta animata ---------- */
+const CAT_CY=48; // centro del gatto sopra i piedi
+function jumpY(dx){const t=dx/G_.speed;return -(G_.jv*t-G_.g*t*t/2)}
+function addCoin(x,y,gem){GM.coins.push({x,y,got:false,gem:!!gem,ph:Math.random()*6.3,sp:2.2+Math.random()*2.2})}
+function coinPatterns(a,b,obst){const pats=obst?['line','arc','wave','high','stairs','arc','zig','arc']:['line','wave','high','stairs','zig'];let x=a,last=GM.lastPat||'';
+  while(x<b-110){let p=pick(pats);let n=0;while((p===last||(!obst&&p==='arc'))&&n++<8)p=pick(pats);last=p;const room=b-x;
+    if(p==='line'){const k=4+Math.floor(Math.random()*3);for(let i=0;i<k;i++)addCoin(x+i*30,-34);x+=k*30+50}
+    else if(p==='arc'&&room>220){const ox=x+110;GM.obst.push({x:ox,hit:false});const st=G_.speed*G_.jv/G_.g;
+      for(let d=-64;d<=64;d+=32)addCoin(ox+d,jumpY(d+st)-CAT_CY,d===0&&Math.random()<0.45);x+=230}
+    else if(p==='wave'){for(let i=0;i<7;i++)addCoin(x+i*28,-34-Math.max(0,Math.sin(i/6*Math.PI))*70);x+=7*28+50}
+    else if(p==='high'&&room>200){for(let i=0;i<3;i++)addCoin(x+60+i*32,-34);addCoin(x+180,-150,true);for(let d of[-34,34])addCoin(x+180+d,-128);x+=240}
+    else if(p==='stairs'){for(let i=0;i<5;i++)addCoin(x+i*30,-34-i*22);x+=5*30+60}
+    else if(p==='zig'){for(let i=0;i<6;i++)addCoin(x+i*30,i%2?-80:-34);x+=6*30+50}
+    else x+=60}
+  GM.lastPat=last}
+function coinSfx(gem){if(!ST.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const now=AC.currentTime;GM.chain=(GM.t-(GM.lastCoinT||-9)<0.6)?Math.min((GM.chain||0)+1,10):0;GM.lastCoinT=GM.t;
+  const base=gem?[1318,1760,2093]:[988*Math.pow(2,GM.chain/12),1480*Math.pow(2,GM.chain/12)];
+  base.forEach((f,i)=>{const t=now+i*.06,o=AC.createOscillator(),g=AC.createGain();o.type=gem?'triangle':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+.22);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+.25)})}catch(e){}}
+function collectCoin(k){k.got=true;const v=k.gem?5:1;PS.coins+=v;ST.coins+=v;coinSfx(k.gem);
+  const sx=k.x-GM.camX,sy=GM.gy+k.y;GM.fly.push({x:sx,y:sy,t:0,gem:k.gem,v});
+  GM.pops.push({x:k.x,y:GM.gy+k.y-14,t:0,txt:'+'+v,gem:k.gem});burst(k.x,GM.gy+k.y,k.gem?14:6,k.gem?['#E6B3FF','#fff','#9BE9FF']:['#FFD84D','#fff'])}
+function coinUpdate(dt){const p=GM.p,cx=p.x+6,cy=p.y-CAT_CY;
+  for(const k of GM.coins){if(k.got)continue;const kx=k.x,ky=GM.gy+k.y,dx=cx-kx,dy=cy-ky,d=Math.hypot(dx,dy);
+    if(d<44){collectCoin(k);continue}
+    if(d<120&&GM.phase!=='wait'){const f=Math.min(1,dt*(9-d/20));k.x+=dx*f*0.6;k.y+=dy*f*0.6}}
+  const hud=document.getElementById('gcoins'),cr=GM.c.getBoundingClientRect();let hx=GM.W-40,hy=20;
+  if(hud){const r=hud.getBoundingClientRect();hx=r.left-cr.left+r.width/2-14;hy=r.top-cr.top+r.height/2}
+  GM.fly=GM.fly.filter(f=>{f.t+=dt*1.9;if(f.t>=1){if(hud){hud.textContent=ST.coins;const pill=hud.parentElement;pill.classList.remove('bump');void pill.offsetWidth;pill.classList.add('bump')}return false}
+    const e=f.t*f.t*(3-2*f.t);f.cx=f.x+(hx-f.x)*e;f.cy=f.y+(hy-f.y)*e-Math.sin(f.t*Math.PI)*60;return true});
+  GM.pops=GM.pops.filter(q=>(q.t+=dt)<0.8);
+  if(Math.random()<dt*1.5){const vis=GM.coins.filter(k=>!k.got&&k.x>GM.camX&&k.x<GM.camX+GM.W);if(vis.length){const k=pick(vis);GM.sparks.push({k,t:0})}}
+  GM.sparks=GM.sparks.filter(q=>(q.t+=dt)<0.5)}
+function drawGem(c,x,y,r,t){c.save();c.translate(x,y);c.scale(Math.max(0.25,Math.abs(Math.cos(t))),1);
+  c.shadowColor='#C77DFF';c.shadowBlur=16;const g=c.createLinearGradient(-r,-r,r,r);g.addColorStop(0,'#F3D9FF');g.addColorStop(0.5,'#B266FF');g.addColorStop(1,'#5B2AAE');c.fillStyle=g;
+  c.beginPath();c.moveTo(0,-r);c.lineTo(r*0.8,-r*0.25);c.lineTo(0,r);c.lineTo(-r*0.8,-r*0.25);c.closePath();c.fill();c.shadowBlur=0;
+  c.fillStyle='rgba(255,255,255,.55)';c.beginPath();c.moveTo(0,-r);c.lineTo(r*0.35,-r*0.25);c.lineTo(0,-r*0.05);c.lineTo(-r*0.35,-r*0.25);c.closePath();c.fill();c.restore()}
+function drawCoin(c,im,x,y,s,t){if(im){c.drawImage(im,x-13*s,y-13,26*s,26)}else{c.fillStyle='#FFD84D';c.beginPath();c.ellipse(x,y,10*s,10,0,0,7);c.fill()}}
+function drawStar(c,x,y,r,a){c.save();c.globalAlpha=a;c.fillStyle='#fff';c.translate(x,y);c.beginPath();for(let i=0;i<8;i++){const rr=i%2?r*0.22:r,an=i*Math.PI/4;c.lineTo(Math.cos(an)*rr,Math.sin(an)*rr)}c.closePath();c.fill();c.restore()}
 function gTap(e){if(!GM)return;const r=GM.c.getBoundingClientRect(),x=e.clientX-r.left+GM.camX,y=e.clientY-r.top;
   if(GM.phase==='wait'){const p=GM.plats.find(p=>p.state==='ok'&&x>=p.x-10&&x<=p.x+p.w+10&&y>=p.y-50&&y<=p.y+p.h+20);if(p){gChoose(p.i);return}}
   if(GM.phase==='run'&&GM.p.on){GM.p.vy=-G_.jv;GM.p.on=false;GM.tapped=true;sfx('jump')}}
@@ -904,8 +943,8 @@ function gUpdate(dt){const p=GM.p;
   if(GM.phase==='landed'&&GM.target&&GM.target.state==='fall'){}
   GM.camX+=(GM.camT-GM.camX)*Math.min(1,dt*5);
   p.sq=Math.max(0,p.sq-dt*4);
-  for(const c of GM.coins)if(!c.got&&Math.abs(c.x-p.x)<26&&Math.abs((GM.gy+c.y)-(p.y-26))<34){c.got=true;PS.coins+=1;ST.coins+=1;sfx('coin');burst(c.x,GM.gy+c.y,6,['#FFD84D','#fff']);const el=document.getElementById('gcoins');if(el)el.textContent=ST.coins}
-  for(const o of GM.obst)if(!o.hit&&Math.abs(o.x-p.x)<24&&p.y>GM.gy-30){o.hit=true;p.vy=-420;p.on=false;sfx('ko');gMsg('Ops! Tocca per saltare gli ostacoli','bad')}
+  coinUpdate(dt);
+  for(const o of GM.obst)if(!o.hit&&Math.abs(o.x-p.x)<20&&p.y>GM.gy-22){o.hit=true;p.vy=-420;p.on=false;sfx('ko');gMsg('Ops! Tocca per saltare gli ostacoli','bad')}
   for(const pr of GM.proj){pr.t+=dt;if(pr.t>=0.7&&!pr.hit){pr.hit=true;PS.hp=Math.max(0,PS.hp-pr.dmg);GM.bossShake=0.5;sfx('hit');const hp=document.getElementById('ghp');if(hp)hp.style.width=PS.hp+'%';burst(GM.camX+GM.W-80,GM.top+60,18,['#FF6FA8','#FFD84D','#fff'])}}
   GM.bossShake=Math.max(0,GM.bossShake-dt);
   GM.parts=GM.parts.filter(q=>(q.life-=dt)>0);for(const q of GM.parts){q.vy+=900*dt;q.x+=q.vx*dt;q.y+=q.vy*dt}}
@@ -946,8 +985,11 @@ function gDraw(){const c=GM.ctx,W=GM.W,H=GM.H,th=GM.th,cam=GM.camX,gy=GM.gy,wk=w
   if(GM.flagX){const im=spr('flag');if(im){const h=150,w=h*im.width/im.height;c.drawImage(im,GM.flagX-w*0.2,gy-h+4,w,h)}}
   // ostacoli e monete
   for(const o of GM.obst){if(o.x<cam-60||o.x>cam+W+60)continue;const im=spr('o_'+wk);c.globalAlpha=o.hit?0.45:1;if(im){const w={num:56,fra:70,geo:66,ter:34}[wk],h=w*im.height/im.width;c.drawImage(im,o.x-w/2,gy-h+4,w,h)}c.globalAlpha=1}
-  const coin=spr('coin');for(const k of GM.coins){if(k.got||k.x<cam-30||k.x>cam+W+30)continue;const y=gy+k.y-26,s=Math.max(0.15,Math.abs(Math.cos(GM.t*3+k.x*0.05)));
-    if(coin){c.drawImage(coin,k.x-13*s,y-13,26*s,26)}else{c.fillStyle='#FFD84D';c.beginPath();c.ellipse(k.x,y,10*s,10,0,0,7);c.fill()}}
+  const coin=spr('coin');for(const k of GM.coins){if(k.got||k.x<cam-30||k.x>cam+W+30)continue;const y=gy+k.y+Math.sin(GM.t*2.4+k.ph)*3.5,a=GM.t*k.sp+k.ph;
+    if(k.gem){c.save();c.globalAlpha=0.35+0.2*Math.sin(GM.t*4+k.ph);const g=c.createRadialGradient(k.x,y,2,k.x,y,30);g.addColorStop(0,'#E6B3FF');g.addColorStop(1,'rgba(178,102,255,0)');c.fillStyle=g;c.beginPath();c.arc(k.x,y,30,0,7);c.fill();c.restore();drawGem(c,k.x,y,15,a*0.6)}
+    else drawCoin(c,coin,k.x,y,Math.max(0.12,Math.abs(Math.cos(a))),a)}
+  for(const q of GM.sparks){if(q.k.got)continue;const a=1-Math.abs(q.t/0.25-1);drawStar(c,q.k.x+6,GM.gy+q.k.y-7,7*a+2,a)}
+  c.textAlign='center';for(const q of GM.pops){c.globalAlpha=1-q.t/0.8;c.font='800 '+(q.gem?20:16)+'px system-ui';c.fillStyle=q.gem?'#E6B3FF':'#FFD84D';c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=3;const yy=q.y-q.t*50;c.strokeText(q.txt,q.x,yy);c.fillText(q.txt,q.x,yy)}c.globalAlpha=1;
   // piattaforme 3D con cartellino risposta
   c.textBaseline='middle';c.textAlign='center';const pim=spr('pl2_'+wk);
   GM.plats.forEach((p,i)=>{if(p.y>H+80)return;const sx=p.state==='crack'?Math.sin(p.shake*60)*3:0;const x=p.x+sx,y=p.y;
@@ -963,6 +1005,7 @@ function gDraw(){const c=GM.ctx,W=GM.W,H=GM.H,th=GM.th,cam=GM.camX,gy=GM.gy,wk=w
   for(const pr of GM.proj){if(pr.hit)continue;const k=pr.t/0.7,bx=cam+W-80,by=GM.top+60;const x=pr.x+(bx-pr.x)*k,y=pr.y+(by-pr.y)*k-Math.sin(k*Math.PI)*90;c.fillStyle='#FF6FA8';c.beginPath();c.arc(x,y,11,0,7);c.fill();c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.arc(x,y,7,GM.t*10,GM.t*10+3);c.stroke()}
   for(const q of GM.parts){c.fillStyle=q.c;c.globalAlpha=Math.min(1,q.life*2);c.beginPath();c.arc(q.x,q.y,q.r/1.6,0,7);c.fill()}c.globalAlpha=1;
   c.restore();
+  {const ci=spr('coin');for(const f of GM.fly){if(f.cx==null)continue;const sc=1-f.t*0.45;c.globalAlpha=1;if(f.gem)drawGem(c,f.cx,f.cy,13*sc,GM.t*6);else if(ci)c.drawImage(ci,f.cx-12*sc,f.cy-12*sc,24*sc,24*sc)}}
   if(GM.boss&&GM.bimg&&GM.bimg.complete){const s=GM.bossShake>0?Math.sin(GM.t*80)*6:0,bob=Math.sin(GM.t*3)*5;c.save();c.globalAlpha=PS.hp<=0?Math.max(0,1-(0.5-GM.bossShake)*2):1;c.drawImage(GM.bimg,W-150+s,GM.top+bob,130,130);c.restore()}
   const tipY=GM.top+14;c.font='700 15px system-ui';c.textAlign='center';
   if(GM.phase==='wait'){const tip=PS.cur&&PS.cur.tries?'Scegli un’altra piattaforma':'Tocca la piattaforma giusta!';const tw=c.measureText(tip).width+24;c.fillStyle='rgba(14,10,28,.75)';rr(W/2-tw/2,tipY,tw,28,14);c.fill();c.fillStyle='#fff';c.fillText(tip,W/2,tipY+15)}
@@ -1120,7 +1163,7 @@ function welcome(){return `<div class="stack" style="padding-top:12px">
   <p class="muted" style="max-width:52ch">Ogni livello è una corsa: salti sulla risposta giusta, raccogli monete, sblocchi stili e compagni. Se ti blocchi, <b>Mirtillo</b> e <b>Lulù</b> ti danno una dritta.</p></div>
  <div class="card stack"><label class="f" for="w-name">Come ti chiami?<input id="w-name" class="txt" maxlength="20" autocomplete="off" placeholder="Il tuo nome" value="${esc(W.name)}"></label>
   <div class="stack" style="gap:8px"><b>Scegli il tuo avatar</b><div class="picker">${AVATARS.filter(a=>!a[1]).map(a=>`<button class="pick" data-av="${a[0]}" aria-pressed="${a[0]===W.avatar}">${ico(a[0])}</button>`).join('')}</div><p class="muted" style="font-size:.9rem">Altri avatar, compagni e temi si sbloccano nel negozio con le monete 🪙</p></div>
-  <button class="btn primary big wide" id="w-go">Iniziamo</button></div><p class="muted" style="text-align:center;font-size:.85rem;font-weight:700">Mate Chill · versione 10 (gatti 3D col pelo)</p></div>`}
+  <button class="btn primary big wide" id="w-go">Iniziamo</button></div><p class="muted" style="text-align:center;font-size:.85rem;font-weight:700">Mate Chill · versione 11 (monete nuove)</p></div>`}
 function bindWelcome(){const n=document.getElementById('w-name');n.addEventListener('input',()=>W.name=n.value);
   app().querySelectorAll('[data-av]').forEach(b=>b.onclick=()=>{W.avatar=b.dataset.av;W.name=n.value;app().innerHTML=welcome();bindWelcome()});
   document.getElementById('w-go').onclick=()=>{const v=n.value.trim();if(!v){n.focus();n.classList.add('shake');setTimeout(()=>n.classList.remove('shake'),400);return}ST.name=v;ST.avatar=W.avatar;save();go('testIntro')}}
@@ -1151,7 +1194,7 @@ function mapView(){const {items,h}=mapLayout();const rec=recommended();const t=S
   return `<div class="stack">${top}
   <div class="map ${testDone()?'':'fog'}" style="height:${h}px">${zones}<svg class="path" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>${items.map(node).join('')}</div>
   <section class="stack" style="gap:10px"><div class="world-h"><h2>I tuoi badge</h2><span class="muted">${Object.keys(ST.badges).length}/${BADGES.length}</span></div><div class="badges">${BADGES.map(b=>`<div class="badge ${ST.badges[b.id]?'got':''}" title="${b.d}"><span class="b">${b.e}</span>${b.n}</div>`).join('')}</div></section>
-  <div class="footer">${testDone()?'<button class="btn ghost" data-act="testIntro">Rifai il check-in</button>':''}<button class="btn ghost" data-act="parents">Per i genitori</button></div><p class="muted" style="text-align:center;font-size:.8rem">Mate Chill · versione 10 (gatti 3D col pelo)</p></div>
+  <div class="footer">${testDone()?'<button class="btn ghost" data-act="testIntro">Rifai il check-in</button>':''}<button class="btn ghost" data-act="parents">Per i genitori</button></div><p class="muted" style="text-align:center;font-size:.8rem">Mate Chill · versione 11 (monete nuove)</p></div>
   <nav class="dock"><button data-act="map" class="on">🗺️<span>Mappa</span></button><button data-act="shop">🛍️<span>Negozio</span></button><button data-act="settings">⚙️<span>Profilo</span></button></nav>`}
 function scrollToRec(){const r=app().querySelector('.node.rec');if(r&&testDone()){const y=r.getBoundingClientRect().top+scrollY-innerHeight*.4;if(y>200)window.scrollTo({top:y,behavior:'auto'})}}
 
